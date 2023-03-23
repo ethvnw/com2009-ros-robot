@@ -2,15 +2,18 @@
 # A simple ROS publisher node in Python
 
 import rospy 
-from std_msgs.msg import String 
+from std_msgs.msg import String
+from nav_msgs.msg import Odometry
+from geometry_msgs.msg import Twist
 
 class Task1(): 
 
     def __init__(self): 
-        self.node_name = "simple_publisher" 
-        topic_name = "chatter" 
+        self.node_name = "move_feight" 
+        topic_name = "cmd_vel" 
+        self.vel_cmd = Twist()
 
-        self.pub = rospy.Publisher(topic_name, String, queue_size=10) 
+        self.pub = rospy.Publisher(topic_name, Twist, queue_size=10) 
         rospy.init_node(self.node_name, anonymous=True) 
         self.rate = rospy.Rate(10) 
 
@@ -25,13 +28,16 @@ class Task1():
 
     def main_loop(self):
         while not self.ctrl_c: 
-            publisher_message = f"rospy time is: {rospy.get_time()}"
-            self.pub.publish(publisher_message)
+            self.vel_cmd.linear.x = 0.1
+            radius = 0.5
+            self.vel_cmd.angular.z  = self.vel_cmd.linear.x / radius
+            #publisher_message = f"rospy time is: {rospy.get_time()}"
+            self.pub.publish(self.vel_cmd)
             self.rate.sleep()
 
 if __name__ == '__main__': 
-    publisher_instance = Publisher() 
+    publisher_instance = Task1() 
     try:
-        publisher_instance.main_loop() 
+        publisher_instance.main_loop()
     except rospy.ROSInterruptException:
         pass
