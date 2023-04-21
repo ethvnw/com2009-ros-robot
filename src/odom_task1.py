@@ -20,7 +20,7 @@ class OdometryTask1():
 
         # "position" data is provided in meters, so we don't need to do any
         # conversion on this, and can extract the relevant parts of this directly:
-        pos_x = position.x
+        pos_x = position.x 
         pos_y = position.y
         pos_z = position.z
 
@@ -44,11 +44,7 @@ class OdometryTask1():
         node_name = "odom_task1" # a name for our node (we can call it anything we like)
         rospy.init_node(node_name, anonymous=True)
 
-        # When setting up the subscriber, the "odom" topic needs to be specified
-        # and the message type (Odometry) needs to be provided
         self.sub = rospy.Subscriber("odom", Odometry, self.callback)
-
-        # an optional status message:
         rospy.loginfo(f"The '{node_name}' node is active...")
         
         self.counter = 0
