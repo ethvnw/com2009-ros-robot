@@ -38,7 +38,7 @@ class Task1():
     def __init__(self):
         node_name = "Task1"
         self.startup = True
-        self.clockwise = True
+        self.clockwise = False
         self.ctrl_c = False
         rospy.init_node(node_name, anonymous=True)
         
@@ -86,10 +86,10 @@ class Task1():
                 self.pub.publish(self.vel)
                 continue
 
-            if not self.clockwise:
+            if self.clockwise:
                 return
 
-            self.clockwise = False
+            self.clockwise = not self.clockwise
 
 
 if __name__ == "__main__":
