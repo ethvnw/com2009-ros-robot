@@ -82,7 +82,7 @@ class Task1():
 
             self.pub.publish(self.vel)
 
-            while (rospy.get_rostime().secs - StartTime.secs) < 30:
+            while (rospy.get_rostime().secs - StartTime.secs) < 30.78:
                 self.pub.publish(self.vel)
                 continue
 
