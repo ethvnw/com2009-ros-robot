@@ -11,10 +11,15 @@ class SearchActionClient():
 
     def feedback_callback(self, feedback_data: SearchFeedback):
         self.distance = feedback_data.current_distance_travelled
-        print("distance traveled = {self.distance:.3f} m.")
+        if self.msg_counter > 5:
+            print(f"distance traveled = {self.distance:.3f} m.")
+            self.msg_counter = 0
+        else:
+            self.msg_counter += 1
 
     def __init__(self):
         self.distance = 0.0
+        self.msg_counter = 0
 
         self.action_complete = False
         rospy.init_node("search_action_client")
@@ -31,36 +36,37 @@ class SearchActionClient():
     def shutdown_ops(self):
         if not self.action_complete:
             rospy.logwarn("Received a shutdown request. Cancelling Goal...")
-            ## TODO: cancel the goal request, if this node is shutdown before the action has completed...
-
-
-
+            self.client.cancel_goal()
             rospy.logwarn("Goal Cancelled...")
 
-        ## TODO: Print the result here...
+        rospy.sleep(1)
+        result = self.client.get_result()
+        print("result:")
+        print(f" * Action state = {self.client.get_state()}")
+        print(f" * total_distance_travelled = {result.total_distance_travelled:.3f} m")
+        print(f" * closest_object_distance = {result.closest_object_distance:.3f} m")
+        print(f" * closest_object_angle = {result.closest_object_angle:.1f} degrees")
 
 
 
     def main_loop(self):
-        ## TODO: assign values to all goal parameters
-        ## and send the goal to the action server...
-        self.goal.approach_distance = 0.4 # m
-        self.goal.fwd_velocity = 0.1 #m/s
-
+        self.goal.approach_distance = 0.25 # m
+        self.goal.fwd_velocity = 0.26 # m/s
         self.client.send_goal(self.goal,feedback_cb = self.feedback_callback)
 
         while self.client.get_state() < 2:
-            ## TODO: Construct an if statement and cancel the goal if the 
-            ## distance travelled exceeds 2 meters...
-            if self.distance ...
-
-
+            if self.distance > 2:
+                print("more than 2m - stopped")
                 # break out of the while loop to stop the node:
                 break
 
             self.rate.sleep()
 
-        self.action_complete = True
+        self.action_complete = True if self.client.get_state() == 3 else False
 
 if __name__ == '__main__':
-    ## TODO: Instantiate the node and call the main_loop() method from it...
+    none = SearchActionClient()
+    none.main_loop()
+
+
+
