@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
+import math
 import rospy
 import cv2
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
+from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 
 
@@ -14,32 +16,35 @@ class Task4():
         self.ctrl_c = False
         self.rate = rospy.Rate(1)
 
-        self.cam_sub = rospy.Subscriber("/camera/rgb/image_raw",
-            Image, self.cam_callback)
+        self.scan_sub = rospy.Subscriber("/scan", LaserScan, self.scan_callback)
+        self.cam_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.cam_callback)
         self.cvbridge_interface = CvBridge()
-
-        self.colour = 0
-        self.finding_target = False
-        self.target_colour = ""
-        self.target_found = False
         self.m00 = 0
         self.m00_min = 10000
-
+        self.colours = {
+            "blue":       [(115, 225, 100), (130, 255, 255)],
+            "green":      [(20, 160, 100), (65, 255, 255)],
+            "turqouise":  [(90, 160, 100), (90, 255, 255)],
+            "red":        [(0, 205, 100), (10, 255, 255)],
+            "yellow":     [(25, 170, 100), (30, 255, 255)],
+            "purple":     [(145, 200, 100), (155, 255, 255)]
+        }
 
         self.pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
         self.vel = Twist()
 
+        self.target_colour = ""
 
         rospy.on_shutdown(self.shutdownhook)
-        rospy.loginfo(f"the {node_name} node has been initialised...")
+        rospy.loginfo(f"The {node_name} node has been initialised...")
 
     
     def shutdownhook(self):
-        # publish an empty twist message to stop the robot
-        # (by default all velocities will be zero):
         self.pub.publish(Twist())
         self.ctrl_c = True
 
+    def scan_callback(self, scan_data):
+        self.scan_data = scan_data.ranges
 
     def cam_callback(self, img_data):
         try:
@@ -54,66 +59,44 @@ class Task4():
         crop_y = int((height/2) - (crop_height/2))
 
         crop_img = cv_img[crop_y:crop_y+crop_height, crop_x:crop_x+crop_width]
-        hsv_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2HSV)
+        self.hsv_img = cv2.cvtColor(crop_img, cv2.COLOR_BGR2HSV)
 
-
-        colours = ["blue", "green", "turqouise", "red", "yellow", "purple"]
-        lowers = [(115, 225, 100), (50, 225, 100), (90, 162, 100), (0, 205, 100), (25, 155, 100), (147, 200, 100)]
-        uppers = [(130, 255, 255), (65, 255, 255), (91, 255, 255), (0, 255, 255), (30, 255, 255), (154, 255, 255)]
-
-        
-        mask = cv2.inRange(hsv_img, lowers[self.colour], uppers[self.colour])
-        res = cv2.bitwise_and(crop_img, crop_img, mask = mask)
-
-
-        m = cv2.moments(mask)
-        self.m00 = m['m00']
-        self.cy = m['m10'] / (m['m00'] + 1e-5)
-
-        if self.m00 > self.m00_min:
-            if self.finding_target:
-                self.target_found = True
-                self.finding_target = False
-                self.target_colour = colours[self.colour]
-                cv2.imshow('cropped image', res)
-        
+        if self.target_colour != "":
+            self.mask = cv2.inRange(self.hsv_img, self.colours[self.target_colour][0], self.colours[self.target_colour][1])
+            m = cv2.moments(self.mask)
+            self.m00 = m['m00']
+            self.cy = m['m10'] / (m['m00'] + 1e-5)
+            self.cz = m['m01'] / (m['m00'] + 1e-5)
+            
+        cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
 
 
     def find_target_colour(self):
-        t0 = rospy.get_rostime().secs
         self.vel.angular.z = 0.6
-
-        while (rospy.get_rostime().secs - t0) < 4:
-            self.pub.publish(self.vel)
-
+        time = math.radians(90) / 0.6
+        self.pub.publish(self.vel)
+        rospy.sleep(time)
         self.pub.publish(Twist())
 
-        self.finding_target = True
-        while not self.target_found:
-            self.colour +=1 
-            if self.colour >= 5:
-                self.colour = 0
-        
+        for colour in self.colours:
+            mask = cv2.inRange(self.hsv_img, self.colours[colour][0], self.colours[colour][1])
+            if mask.any():
+                self.target_colour = colour
+                print(f"Target colour is {self.target_colour}")
+                break
 
-        t0 = rospy.get_rostime().secs
         self.vel.angular.z = -0.6
-
-        while (rospy.get_rostime().secs - t0) < 3.05:
-            self.pub.publish(self.vel)
-
+        self.pub.publish(self.vel)
+        rospy.sleep(time)
         self.pub.publish(Twist())
 
 
     def main_loop(self):
         while not self.ctrl_c:
-            if not self.target_found:
+            if self.target_colour == "":
+                rospy.sleep(0.5)
                 self.find_target_colour()
-
-            print(self.target_colour)
-
-
-
 
     
 if __name__ == "__main__":
