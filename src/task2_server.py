@@ -4,15 +4,18 @@
 # Import the core Python modules for ROS and to implement ROS Actions:
 import rospy
 import actionlib
+from scipy.stats import levy
+import random
 
 # Import all the necessary ROS message types:
+from geometry_msgs.msg import Twist
 from tuos_ros_msgs.msg import SearchAction, SearchFeedback, SearchResult, SearchGoal
 
 # Import the tb3 modules from tb3.py
 from tb3 import Tb3Move, Tb3Odometry, Tb3LaserScan
 
 # Import some other useful Python Modules
-from math import sqrt, pow
+from math import sqrt, pow, radians
 
 class SearchActionServer():
     feedback = SearchFeedback() 
@@ -45,7 +48,7 @@ class SearchActionServer():
             print("velocity out of range")
             success = False
 
-        if dist > 0.26: # extend range?
+        if dist < 0.2:
             print("invalid distance")
             success = False
 
@@ -53,7 +56,6 @@ class SearchActionServer():
             self.result.total_distance_travelled = -1.0
             self.result.closest_object_angle = -1.0
             self.closest_object_distance = -1.0
-            #self.result.image_path = "None [ABORTED]"
             self.actionserver.set_aborted(self.result)
             return
 
@@ -70,40 +72,87 @@ class SearchActionServer():
  
         while self.tb3_lidar.min_distance > dist:
             # update LaserScan data:
+
+            levy_number = levy.rvs(scale=1,size=1)[0]
+
             self.closest_object = self.tb3_lidar.min_distance
             self.closest_object_location = self.tb3_lidar.closest_object_position
- 
+
+            StartTime = rospy.get_rostime()
+
             self.vel_controller.publish()
 
-            # determine how far the robot has travelled so far:
-            self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+            while (rospy.get_rostime().secs - StartTime.secs) < levy_number:
+                
+                self.vel_controller.publish()
 
-            self.result.total_distance_travelled = self.distance
-            self.result.closest_object_angle = self.closest_object_location
-            self.closest_object_distance = self.closest_object
+                # determine how far the robot has travelled so far:
+                self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
 
-            # check if there has been a request to cancel the action mid-way through:
-            if self.actionserver.is_preempt_requested():
-                print("action cancelled")
-                self.actionserver.set_preempted(self.result)
-                self.vel_controller.stop()
-                success = False
-                # exit the loop:
+                self.result.total_distance_travelled = self.distance
+                self.result.closest_object_angle = self.closest_object_location
+                self.closest_object_distance = self.closest_object
+
+                # check if there has been a request to cancel the action mid-way through:
+                if self.actionserver.is_preempt_requested():
+                    print("action cancelled")
+                    self.actionserver.set_preempted(self.result)
+                    self.vel_controller.stop()
+                    success = False
+                    # exit the loop:
+                    break
+
+                self.feedback.current_distance_travelled = self.distance
+                self.actionserver.publish_feedback(self.feedback)
+
+                rate.sleep()
+
+            self.vel_controller.stop()
+            print("moved forward a step")        
+            if not success:
+                print("no success")
                 break
 
-            self.feedback.current_distance_travelled = self.distance
-            self.actionserver.publish_feedback(self.feedback)
+            # StartTime = rospy.get_rostime()
+            # angular_Velo = Twist()
+            # angular_pub = rospy.Publisher("cmd_vel", Twist, queue_size=10)
+            # angular_Velo.angular.z = 1
+            # angular_time = int(angular_Velo.angular.z/radians(random.randint(0,45)))
 
-            rate.sleep()
+            # while (rospy.get_rostime().secs - StartTime.secs) < angular_time:
+            #     print("inside")
+            #     #self.vel_controller.publish()
+            #     angular_pub.publish(Twist())
 
+            #     self.result.closest_object_angle = self.closest_object_location
+            #     self.closest_object_distance = self.closest_object
+
+            #     # check if there has been a request to cancel the action mid-way through:
+            #     if self.actionserver.is_preempt_requested():
+            #         print("action cancelled")
+            #         self.actionserver.set_preempted(self.result)
+            #         self.vel_controller.stop()
+            #         success = False
+            #         # exit the loop:
+            #         break
+
+            #     self.actionserver.publish_feedback(self.feedback)
+
+            #     angular_Velo.angular.z = 0
+            #     angular_pub.publish(Twist())
+
+            #     rate.sleep()
+
+            # print("rotated")
+            # if not success:
+            #     print("no success")
+            #     break
+        
+        print("within distance")
         if success:
             rospy.loginfo("approach completed successfully.")
             self.vel_controller.stop()
             self.actionserver.set_succeeded(self.result)
-
-
-
-
 
 if __name__ == '__main__':
     rospy.init_node("search_action_server")
