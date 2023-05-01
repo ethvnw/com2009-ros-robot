@@ -2,13 +2,14 @@
 import rospy
 import actionlib
 import math
-import numpy as np
 import cv2
+from tb3 import Tb3Odometry
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image
-from sensor_msgs.msg import LaserScan
 from geometry_msgs.msg import Twist
 from tuos_ros_msgs.msg import SearchAction, SearchGoal, SearchFeedback
+from nav_msgs.msg import Odometry
+from tf.transformations import euler_from_quaternion 
 
 class Task4():
 
@@ -18,7 +19,15 @@ class Task4():
         self.ctrl_c = False
         self.rate = rospy.Rate(1)
 
-        # self.scan_sub = rospy.Subscriber("/scan", LaserScan, self.scan_callback)
+        # initially all positions are 0
+        self.odom_tb3 = Tb3Odometry()
+        while self.odom_tb3.posx == 0.0 and self.odom_tb3.posy == 0.0:
+            rospy.sleep(0.1)
+        self.init_x = self.odom_tb3.posx
+        self.init_y = self.odom_tb3.posy
+        print(f"TurtleBot3's initial position: ({self.odom_tb3.posx}, {self.odom_tb3.posy})")
+        
+
         self.cam_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.cam_callback)
         self.cvbridge_interface = CvBridge()
         self.m00 = 0
@@ -36,7 +45,7 @@ class Task4():
         self.vel = Twist()
 
         self.client = actionlib.SimpleActionClient("/obstacle_avoidance_server", SearchAction)
-        self.action_complete = False
+        self.goal_sent = False
         self.distance = 0
         self.goal = SearchGoal()
 
@@ -47,21 +56,14 @@ class Task4():
 
     
     def shutdownhook(self):
-        if not self.action_complete:
+        if self.goal_sent:
             self.client.cancel_goal()
             rospy.logwarn("The search action was cancelled.")
 
         self.pub.publish(Twist())
         self.ctrl_c = True
 
-    def scan_callback(self, scan_data):
-        left_arc = scan_data.ranges[0:21]
-        right_arc = scan_data.ranges[-20:]
-        front_arc = np.array(left_arc[::-1] + right_arc[::-1])
-        self.min_dist = front_arc.min()
 
-        arc_angles = np.arange(-20, 21)
-        self.obj_angle = arc_angles[np.argmin(front_arc)]
 
     def cam_callback(self, img_data):
         try:
@@ -90,11 +92,12 @@ class Task4():
 
     def server_callback(self, feedback: SearchFeedback):
         self.distance = feedback.current_distance_travelled
-        print(f"Distance travelled: {self.distance}")
+
 
     def find_target_colour(self):
-        self.vel.angular.z = 0.6
-        time = math.radians(90) / 0.6
+        speed = 1
+        self.vel.angular.z = speed
+        time = math.radians(90) / speed
         self.pub.publish(self.vel)
         rospy.sleep(time)
         self.pub.publish(Twist())
@@ -106,31 +109,63 @@ class Task4():
                 print(f"Target colour is {self.target_colour}")
                 break
 
-        self.vel.angular.z = -0.6
+        self.vel.angular.z = -speed
         self.pub.publish(self.vel)
         rospy.sleep(time)
         self.pub.publish(Twist())
+
+
+    def check_for_target(self):
+        mask = cv2.inRange(self.hsv_img, self.colours[self.target_colour][0], self.colours[self.target_colour][1])
+        if mask.any():
+            print("Target in view")
+            return True
+        
+        return False
+        
+    
 
 
     def main_loop(self):
         while not self.ctrl_c:
             self.rate.sleep()
             rospy.sleep(0.2)
+            if self.target_colour == "":
+                self.find_target_colour()
 
-            # if self.target_colour == "":
-            #     rospy.sleep(0.5)
-            #     self.find_target_colour()
+             
+            #if robots positon >  0.3m from initial position
+
+            #print (self.init_x)
+            #print(self.init_y)
 
 
-            if not self.action_complete:
+            if not self.goal_sent:
                 self.goal.approach_distance = 0.4
-                self.goal.fwd_velocity = 0.15
+                self.goal.fwd_velocity = 0.2
                 self.client.send_goal(self.goal, feedback_cb=self.server_callback)
-                self.action_complete = self.client.wait_for_result()
+                self.goal_sent = True
 
-            if self.action_complete:
-                print("action complete")
-                self.shutdownhook()
+            #if turtlebot is seeing colour and is 0.3m from initial position
+            #if self.check_for_target() and abs(self.odom_tb3.posx - self.init_x) > 0.3 and abs(self.odom_tb3.posy - self.init_y) > 0.3:
+                #it moves forwards
+                #self.vel.linear.x = 0.5
+                #if self.check_for_target() and bot is 10 cm from target:
+                #then stop
+                    
+
+
+                # self.goal.approach_distance = 0.2
+                # self.goal.fwd_velocity = 0.0
+                # self.client.send_goal(self.goal, feedback_cb=self.server_callback)
+                # self.goal_sent = True
+                #break
+            # then move towards target
+            # else 
+            # continue
+            
+            
+            self.check_for_target()
     
 if __name__ == "__main__":
     node = Task4()
