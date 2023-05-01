@@ -48,12 +48,18 @@ class Tb3Odometry(object):
 
 class Tb3LaserScan(object):
     def laserscan_cb(self, scan_data):
-        left_arc = scan_data.ranges[0:21]
-        right_arc = scan_data.ranges[-20:]
-        front_arc = np.array(left_arc[::-1] + right_arc[::-1])
+        front_left_arc = scan_data.ranges[0:40]
+        front_right_arc = scan_data.ranges[-40:]
+        front_arc = np.array(front_left_arc[::-1] + front_right_arc[::-1])
+
+        left_arc = scan_data.ranges[21:90]
+        right_arc = scan_data.ranges[-90:-21]
+        self.left_min = min(left_arc)
+        self.right_min = min(right_arc)
+
         
         self.min_distance = front_arc.min()
-        arc_angles = np.arange(-20, 21)
+        arc_angles = np.arange(-40, 40)
         self.closest_object_position = arc_angles[np.argmin(front_arc)]
 
     def __init__(self):
