@@ -65,4 +65,5 @@ class Tb3LaserScan(object):
     def __init__(self):
         self.min_distance = 0.0
         self.closest_object_position = 0.0 # degrees
-        self.subscriber = rospy.Subscriber('/scan', LaserScan, self.laserscan_cb) 
+        self.subscriber = rospy.Subscriber('/scan', LaserScan, self.laserscan_cb)
+        self.left_min = 0.0
