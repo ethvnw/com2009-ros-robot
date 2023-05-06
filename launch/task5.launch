@@ -1,0 +1,10 @@
+<launch>
+    <arg name="target_colour" default="red"/>
+    <node pkg="com2009_team5" name="task5_server" type="task5_server.py" output="screen"/>
+    <node pkg="com2009_team5" name="task5" type="task5.py" args="-target_colour $(arg target_colour)" output="screen"/>
+
+
+    <!-- Calls SLAM for map creation -->
+    <!-- <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch"/> -->
+
+</launch>
