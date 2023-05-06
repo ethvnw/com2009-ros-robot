@@ -3,6 +3,7 @@ import rospy
 import actionlib
 import math
 import cv2
+import numpy as np
 from tb3 import Tb3Odometry, Tb3LaserScan, Tb3Move
 from cv_bridge import CvBridge, CvBridgeError
 from sensor_msgs.msg import Image, LaserScan
@@ -27,14 +28,15 @@ class Task4():
         self.init_y = self.odom_tb3.posy
         print(f"TurtleBot3's initial position: ({self.odom_tb3.posx}, {self.odom_tb3.posy})")
         
-
+        self.target_colour = ""
         self.cam_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.cam_callback)
-        #sub = rospy.Subscriber("/scan", LaserScan, self.scan_callback)
+        self.scan_sub = rospy.Subscriber("/scan", LaserScan, self.scan_callback)
         self.cvbridge_interface = CvBridge()
         self.m00 = 0
         self.m00_min = 10000
+        # some colour ranges are still incorrect
         self.colours = {
-            "blue":       [(115, 225, 100), (130, 255, 255)],
+            "blue":       [(115, 225, 100), (130, 255, 130)],
             "green":      [(20, 160, 100), (65, 255, 255)],
             "turqouise":  [(90, 160, 100), (100, 255, 255)],
             "red":        [(0, 205, 100), (10, 255, 255)],
@@ -48,24 +50,34 @@ class Task4():
         self.robot_controller = Tb3Move()
 
         self.client = actionlib.SimpleActionClient("/obstacle_avoidance_server", SearchAction)
-        self.goal_sent = False
+        #self.goal_sent = False
+        self.action_complete = False
         self.distance = 0
         self.goal = SearchGoal()
 
-        self.target_colour = ""
+        
 
         rospy.on_shutdown(self.shutdownhook)
         rospy.loginfo(f"The {node_name} node has been initialised...")
 
     
     def shutdownhook(self):
-        if self.goal_sent:
+        if not self.action_complete:
             self.client.cancel_goal()
             rospy.logwarn("The search action was cancelled.")
 
         self.pub.publish(Twist())
         self.ctrl_c = True
 
+    def scan_callback(self, scan_data):
+        self.scan_data = scan_data.ranges
+        left_arc = scan_data.ranges[0:21]
+        right_arc = scan_data.ranges[-20:]
+        front_arc = np.array(left_arc[::-1] + right_arc[::-1])
+        self.min_dist = front_arc.min()
+
+        arc_angles = np.arange(-20, 21)
+        self.obj_angle = arc_angles[np.argmin(front_arc)]
 
     def cam_callback(self, img_data):
         try:
@@ -95,6 +107,7 @@ class Task4():
 
     def server_callback(self, feedback: SearchFeedback):
         self.distance = feedback.current_distance_travelled
+        print(f"Distance travelled: {self.distance}")
 
 
     def find_target_colour(self):
@@ -109,7 +122,7 @@ class Task4():
             mask = cv2.inRange(self.hsv_img, self.colours[colour][0], self.colours[colour][1])
             if mask.any():
                 self.target_colour = colour
-                print(f"Target colour is {self.target_colour}")
+                print(f"SEARCH INITIATED: The target beacon colour is {self.target_colour}.")
                 break
 
         self.vel.angular.z = -speed
@@ -121,25 +134,31 @@ class Task4():
     def check_for_target(self):
         mask = cv2.inRange(self.hsv_img, self.colours[self.target_colour][0], self.colours[self.target_colour][1])
         if mask.any():
-            print("Target in view")
+            print("TARGET DETECTED: Beaconing initiated.")
             return True
         
         return False
         
 
+    
+
     def main_loop(self):
+        #prints coords of the turtlebot
+        #print(f"COORDS : ({self.odom_tb3.posx}, {self.odom_tb3.posy})")
+
         while not self.ctrl_c:
             self.rate.sleep()
             rospy.sleep(0.2)
             if self.target_colour == "":
                 self.find_target_colour()
 
-            if not self.goal_sent:
+            if not self.action_complete:
                 self.goal.approach_distance = 0.4
                 self.goal.fwd_velocity = 0.2
                 self.client.send_goal(self.goal, feedback_cb=self.server_callback)
-                self.goal_sent = True
-
+                #self.action_complete = self.client.wait_for_result()
+            
+            self.check_for_target()
             StartTime = rospy.get_rostime()
 
             #if turtlebot is seeing colour and is 0.3m from initial position
@@ -147,38 +166,15 @@ class Task4():
                 print("hello, we are in the for loop")
 
                 #if the colour takes up the whole screen ie the object is very close
-                # if  (1 >= self.cy <= 1200):
-                #     #stop the robot
-                #     while(rospy.get_rostime().secs - StartTime.secs) < 30.78:
-                #         self.robot_controller.set_move_cmd(0.0, 0.0)
-                #     print("BEACON FOUND")
-                #     self.pub.publish(Twist())
+                if  (1 >= self.cy <= 1200):
+                    #stop the robot
+                    while(rospy.get_rostime().secs - StartTime.secs) < 30.78:
+                        self.robot_controller.set_move_cmd(0.0, 0.0)
+                    print("BEACONING COMPLETE: The robot has now stopped.")
+                    self.pub.publish(Twist())
 
-                #if the traget colour is on the right hand side
-                if self.cy >= 570:
-                    print("moving right")
-                    while(rospy.get_rostime().secs - StartTime.secs) < 0.3:
-                        # move right
-                        self.vel.angular.z = 0.5
-                        self.vel.linear.x = 0.2
-                        self.pub.publish(self.vel)
-
-                        #self.robot_controller.set_move_cmd(0.0, -0.5)
-                    #self.pub.publish(Twist())
-
-                #if target colour is on the left hand side
-                elif self.cy <= 550:
-                    print("moving left")
-                    while(rospy.get_rostime().secs - StartTime.secs) < 0.3:
-                        #move left
-                        self.vel.angular.z = -0.5
-                        self.vel.linear.x = 0.2
-                        self.pub.publish(self.vel)
-                        #self.robot_controller.set_move_cmd(0.0, -0.5)
-                    #self.pub.publish(Twist())
-
-                #if colour is in the middle
-                else:
+                # if the target colour is in the middle
+                if 500 < self.cy < 600:
                     print("moving fwd")
                     while(rospy.get_rostime().secs - StartTime.secs) < 2:
                         # move fwd
@@ -186,8 +182,30 @@ class Task4():
                         
                         self.pub.publish(self.vel)
                         #self.robot_controller.set_move_cmd(0.5, 0.0)
+                # if the target colour is on the right hand side
+                elif self.cy >= 600:
+                    print("moving right")
+                    while(rospy.get_rostime().secs - StartTime.secs) < 0.3:
+                        # move right
+                        self.vel.angular.z = -0.5
+                        self.vel.linear.x = 0.2
+                        self.pub.publish(self.vel)
 
-            #self.check_for_target()
+                        #self.robot_controller.set_move_cmd(0.0, -0.5)
+                    #self.pub.publish(Twist())
+
+                #if target colour is on the left hand side
+                elif self.cy <= 500:
+                    print("moving left")
+                    while(rospy.get_rostime().secs - StartTime.secs) < 0.3:
+                        #move left
+                        self.vel.angular.z = 0.5
+                        self.vel.linear.x = 0.2
+                        self.pub.publish(self.vel)
+                        #self.robot_controller.set_move_cmd(0.0, -0.5)
+                    #self.pub.publish(Twist())
+                    
+
 
 
 
