@@ -40,13 +40,13 @@ class Task3():
                 print("Sending goal")
                 #self.goal_sent = True
                 self.goal.approach_distance = 0.4
-                self.goal.fwd_velocity = 0.2
+                self.goal.fwd_velocity = 0.35
                 self.client.send_goal(self.goal, feedback_cb=self.feedback_callback)
                 self.action_complete = self.client.wait_for_result()
 
             # while self.scan.left_min > self.wall+0.1:
             #     self.client.cancel_goal()
-            #     self.pub.publish(Twist())
+            #self.pub.publish(Twist())
 
             self.rate.sleep()
             

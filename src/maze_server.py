@@ -43,7 +43,7 @@ class ObstacleAvoidanceServer():
 
             while self.closest_object < goal.approach_distance:
                 self.update_odom()
-                if self.tb3_lidar.left_min > self.tb3_lidar.right_min:
+                if self.tb3_lidar.min_left > self.tb3_lidar.min_right:
                     self.vel_controller.set_move_cmd(0, 0.5)
                 else:
                     self.vel_controller.set_move_cmd(0, -0.5)
