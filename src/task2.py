@@ -3,36 +3,37 @@
 
 import rospy
 import actionlib
-import tb3
-
+from tb3 import Tb3Move, Tb3LaserScan
 from geometry_msgs.msg import Twist
 from tuos_ros_msgs.msg import SearchAction, SearchGoal, SearchFeedback
 
+# Import some other useful Python Modules
+import random
+from scipy.stats import levy
+from math import sqrt, pow, radians
+
 class Task2():
     def __init__(self):
-        self.distance = 0.0
         self.msg_counter = 0
+        self.distance = 0.0
         self.action_complete = False
-        self.goal_sent = False
-        self.ctrl_c = False
-        
         rospy.init_node("Task2", anonymous = True)
+        self.rate = rospy.Rate(1)
+        
         self.client = actionlib.SimpleActionClient(
             "/com2009_team5_task2_server",
             SearchAction
         )
+        self.client.wait_for_server()
+
         self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
+        
         self.goal = SearchGoal()
-        self.scan = tb3.Tb3LaserScan()
-        self.rate = rospy.Rate(1)
+        self.scan = Tb3LaserScan()
+        self.vel_controller = Tb3Move()
 
         rospy.on_shutdown(self.shutdown_ops)
         rospy.loginfo("The node has been initialised...")
-
-        
-        self.client.wait_for_server()
-
-        rospy.on_shutdown(self.shutdown_ops)
 
     def shutdown_ops(self):
         if not self.action_complete:
@@ -42,14 +43,9 @@ class Task2():
 
         rospy.sleep(1)
         result = self.client.get_result()
-        print("result:")
-        print(f" * Action state = {self.client.get_state()}")
-        print(f" * total_distance_travelled = {result.total_distance_travelled:.3f} m")
-        print(f" * closest_object_distance = {result.closest_object_distance:.3f} m")
-        print(f" * closest_object_angle = {result.closest_object_angle:.1f} degrees")
+        print(result)
 
-        self.ctrl_c = True
-        self.pub.publish(Twist())
+        #self.pub.publish(Twist())
 
     def feedback_callback(self, feedback_data: SearchFeedback):
         self.distance = feedback_data.current_distance_travelled
@@ -60,23 +56,64 @@ class Task2():
             self.msg_counter += 1
 
     def main_loop(self):
-        self.wall = self.scan.left_min
+        self.goal.approach_distance = 0.2 # m
+        self.goal.fwd_velocity = 0.2 # m/s
 
-        while not self.ctrl_c:
-            if not self.goal_sent:
-                print("Sending goal")
-                self.goal.approach_distance = 0.1 # m
-                self.goal.fwd_velocity = 0.2 # m/s
-                self.client.send_goal(self.goal,feedback_cb = self.feedback_callback)
-                self.goal_sent = True
+        while (not rospy.is_shutdown()): 
+            self.action_complete = False
+            print("Sending goal")
+            self.client.send_goal(self.goal,feedback_cb = self.feedback_callback)
 
-            while self.scan.left_min > self.wall+0.1:
-                self.client.cancel_goal()
-                self.pub.publish(Twist())
-                break
+            while self.client.get_state() < 2:
+                if self.distance > 2:
+                    self.client.cancel_goal()
+                    rospy.logwarn("Goal Cancelled...")
+                    break
+                self.rate.sleep()
 
+            self.action_complete = True
+
+            obj_angle = self.client.get_result().closest_object_angle
+            if obj_angle > 0:
+                self.vel_controller.set_move_cmd(angular=1.5)
+            else:
+                self.vel_controller.set_move_cmd(angular=-1.5)
+            
+            self.vel_controller.publish()
+
+            print(f"Rotating with {self.vel_controller.vel_cmd.angular.z} angular velocity...")
+
+            while (self.scan.min_distance < self.goal.approach_distance 
+                and self.scan.min_left > 0.15 and self.scan.min_right > 0.15):
+                continue
+
+            # while self.scan.left_min > self.wall+0.1:
+            #     self.client.cancel_goal()
+            #     self.pub.publish(Twist())
+            #     break
+
+            #self.action_complete = True if self.client.get_state() == 3 else False
+
+
+            # update LaserScan data:
+            # levy_number = levy.rvs(scale=0.1,size=1)[0]
+
+            # self.closest_object = self.tb3_lidar.min_distance
+            # self.closest_object_location = self.tb3_lidar.closest_object_position
+
+            # # #TODO: look into time going backwards error caused here vvv
+            # # startTime = rospy.get_rostime()            
+
+            # # while ((rospy.get_rostime().secs - startTime.secs) < levy_number) and (self.closest_object > dist):
+            # #     self.update_odom()
+
+            # #     #TODO: check if levy element acc works
+            # #     self.vel_controller.set_move_cmd(vel,0)
+            # # self.vel_controller.publish()
+
+            self.vel_controller.stop()
             self.rate.sleep()
-        self.action_complete = True if self.client.get_state() == 3 else False
+
 
 if __name__ == '__main__':
     node = Task2()
