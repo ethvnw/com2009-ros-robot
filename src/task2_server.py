@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# search_server.py
+# task2_server.py
 
 #run commands:
 
@@ -63,8 +63,8 @@ class SearchActionServer():
         self.vel_controller.set_move_cmd(vel)
 
         while self.closest_object > dist:
-            print("closest less than dist")
-            print(self.closest_object)
+            # print("closest less than dist")
+            # print(self.closest_object)
 
             if self.actionserver.is_preempt_requested():
                 rospy.loginfo("Action has been stoped before completion.")
@@ -80,13 +80,13 @@ class SearchActionServer():
         #self.vel_controller.stop()
         self.vel_controller.set_move_cmd(0,0)
         self.vel_controller.publish()
-        print("outside of colsit dist loop")
+        # print("outside of colsit dist loop")
 
         if success:
             self.actionserver.set_succeeded(self.result)
             #self.vel_controller.stop()           
             success = True
-            print("success")
+            # print("success")
         else:
             rospy.loginfo("run unsuccessful.")
             self.result.total_distance_travelled = -1.0

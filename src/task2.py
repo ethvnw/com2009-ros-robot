@@ -1,5 +1,5 @@
 #! /usr/bin/env python3
-# search_client.py
+# task2 .py
 
 import rospy
 import actionlib
@@ -10,7 +10,7 @@ from tuos_ros_msgs.msg import SearchAction, SearchGoal, SearchFeedback
 # Import some other useful Python Modules
 import random
 from scipy.stats import levy
-from math import sqrt, pow, radians
+from math import sqrt, pow, radians,log10, floor
 
 class Task2():
     def __init__(self):
@@ -55,9 +55,22 @@ class Task2():
         else:
             self.msg_counter += 1
 
+    def turn_direction(self):
+        obj = self.client.get_result()
+        if obj != None:
+            obj_angle = obj.closest_object_angle
+            if obj_angle > 0:
+                self.vel_controller.set_move_cmd(angular=1.5)
+            else:
+                self.vel_controller.set_move_cmd(angular=-1.5)
+            
+            self.vel_controller.publish()
+
     def main_loop(self):
-        self.goal.approach_distance = 0.2 # m
-        self.goal.fwd_velocity = 0.2 # m/s
+        self.goal.approach_distance = 0.5 # m
+        self.goal.fwd_velocity = 0.26 # m/s
+        start_time = rospy.get_rostime()
+        timeup = False
 
         while (not rospy.is_shutdown()): 
             self.action_complete = False
@@ -73,46 +86,56 @@ class Task2():
 
             self.action_complete = True
 
-            obj_angle = self.client.get_result().closest_object_angle
-            if obj_angle > 0:
-                self.vel_controller.set_move_cmd(angular=1.5)
-            else:
-                self.vel_controller.set_move_cmd(angular=-1.5)
-            
-            self.vel_controller.publish()
+            self.turn_direction()
 
             print(f"Rotating with {self.vel_controller.vel_cmd.angular.z} angular velocity...")
+            
+            step_size = levy.rvs(scale=0.1,size=1)[0]
+            step_inc = 10 ** (floor(log10(step_size)-1))
+            current_step = 0.0
 
             while (self.scan.min_distance < self.goal.approach_distance 
                 and self.scan.min_left > 0.15 and self.scan.min_right > 0.15):
-                continue
+                if ((rospy.get_rostime().secs - start_time.secs) < 90):
 
-            # while self.scan.left_min > self.wall+0.1:
-            #     self.client.cancel_goal()
-            #     self.pub.publish(Twist())
-            #     break
+                    current_step += step_size*0.1
+                    
+                    if (step_size < current_step):
+                        print("reset")
+                        current_step +=step_inc
+                    else:
+                        random_rotate = random.randint(0,180)
+                        current_rotate = 0
 
-            #self.action_complete = True if self.client.get_state() == 3 else False
+                        self.vel_controller.set_move_cmd(0,0)
+                        self.vel_controller.publish()
 
+                        self.turn_direction()
 
-            # update LaserScan data:
-            # levy_number = levy.rvs(scale=0.1,size=1)[0]
+                        while (current_rotate < random_rotate):
+                            print("should be turnign")
+                            current_rotate += 1
 
-            # self.closest_object = self.tb3_lidar.min_distance
-            # self.closest_object_location = self.tb3_lidar.closest_object_position
+                        self.vel_controller.set_move_cmd(0,0)
+                        self.vel_controller.publish()
 
-            # # #TODO: look into time going backwards error caused here vvv
-            # # startTime = rospy.get_rostime()            
+                        self.vel_controller.set_move_cmd(self.goal.fwd_velocity,0)
 
-            # # while ((rospy.get_rostime().secs - startTime.secs) < levy_number) and (self.closest_object > dist):
-            # #     self.update_odom()
+                        step_size = levy.rvs(scale=0.1,size=1)[0]
+                        step_inc = 10 ** (floor(log10(step_size)-1))
+                        current_step = 0.0   
 
-            # #     #TODO: check if levy element acc works
-            # #     self.vel_controller.set_move_cmd(vel,0)
-            # # self.vel_controller.publish()
+                else:
+                    self.client.cancel_goal()
+                    print("90 secs elapsed")
+                    timeup = True
+                    break
 
             self.vel_controller.stop()
             self.rate.sleep()
+
+            if timeup:
+                break
 
 
 if __name__ == '__main__':
