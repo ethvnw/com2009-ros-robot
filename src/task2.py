@@ -66,21 +66,40 @@ class Task2():
             
             self.vel_controller.publish()
 
+    def random_turn(self):
+        random_rotate = random.randint(0,180)
+        current_rotate = 0
+
+        self.vel_controller.set_move_cmd(0,0)
+        self.vel_controller.publish()
+
+        self.turn_direction()
+
+        #print("turning")
+        while (current_rotate < random_rotate):
+            current_rotate += 1
+
+        self.vel_controller.set_move_cmd(0,0)
+        self.vel_controller.publish()
+
+        self.vel_controller.set_move_cmd(self.goal.fwd_velocity,0)
+
+        step_size = levy.rvs(scale=0.1,size=1)[0]
+        step_inc = 10 ** (floor(log10(step_size)-1))
+        current_step = 0.0   
+
     def main_loop(self):
-        self.goal.approach_distance = 0.5 # m
+        self.goal.approach_distance = 0.55 # m
         self.goal.fwd_velocity = 0.26 # m/s
         start_time = rospy.get_rostime()
         timeup = False
-
+        
         while (not rospy.is_shutdown()): 
             self.action_complete = False
-            print("Sending goal")
             self.client.send_goal(self.goal,feedback_cb = self.feedback_callback)
 
             while self.client.get_state() < 2:
                 if self.distance > 2:
-                    self.client.cancel_goal()
-                    rospy.logwarn("Goal Cancelled...")
                     break
                 self.rate.sleep()
 
@@ -88,7 +107,9 @@ class Task2():
 
             self.turn_direction()
 
-            print(f"Rotating with {self.vel_controller.vel_cmd.angular.z} angular velocity...")
+            self.vel_controller.set_move_cmd(self.goal.fwd_velocity,0)
+
+            #print(f"Rotating with {self.vel_controller.vel_cmd.angular.z} angular velocity...")
             
             step_size = levy.rvs(scale=0.1,size=1)[0]
             step_inc = 10 ** (floor(log10(step_size)-1))
@@ -96,45 +117,24 @@ class Task2():
 
             while (self.scan.min_distance < self.goal.approach_distance 
                 and self.scan.min_left > 0.15 and self.scan.min_right > 0.15):
-                if ((rospy.get_rostime().secs - start_time.secs) < 90):
+                # if ((rospy.get_rostime().secs - start_time.secs) < 90):
+                self.random_turn()
+                # else:
+                #     self.client.cancel_goal()
+                #     print("90 secs elapsed")
+                #     timeup = True
+                #     self.action_complete = True
+                #     break
 
-                    current_step += step_size*0.1
-                    
-                    if (step_size < current_step):
-                        print("reset")
-                        current_step +=step_inc
-                    else:
-                        random_rotate = random.randint(0,180)
-                        current_rotate = 0
-
-                        self.vel_controller.set_move_cmd(0,0)
-                        self.vel_controller.publish()
-
-                        self.turn_direction()
-
-                        while (current_rotate < random_rotate):
-                            print("should be turnign")
-                            current_rotate += 1
-
-                        self.vel_controller.set_move_cmd(0,0)
-                        self.vel_controller.publish()
-
-                        self.vel_controller.set_move_cmd(self.goal.fwd_velocity,0)
-
-                        step_size = levy.rvs(scale=0.1,size=1)[0]
-                        step_inc = 10 ** (floor(log10(step_size)-1))
-                        current_step = 0.0   
-
-                else:
-                    self.client.cancel_goal()
-                    print("90 secs elapsed")
-                    timeup = True
-                    break
-
-            self.vel_controller.stop()
+            print("outside")
+            current_step += step_inc
+            if (current_step>step_size):
+                self.random_turn()
             self.rate.sleep()
-
+        
             if timeup:
+                self.vel_controller.stop()
+                self.rate.sleep()
                 break
 
 

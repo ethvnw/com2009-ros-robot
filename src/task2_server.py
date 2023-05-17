@@ -51,7 +51,7 @@ class SearchActionServer():
             self.actionserver.set_aborted(self.result)
             return
 
-        print(f"Search goal recieved: fwd_vel = {vel} m/s, approach_distance = {dist} m.")
+        #print(f"Search goal recieved: fwd_vel = {vel} m/s, approach_distance = {dist} m.")
 
         # Get the robot's current odometry from the Tb3Odometry() class:
         self.posx0 = self.tb3_odom.posx
@@ -97,7 +97,8 @@ class SearchActionServer():
             return
 
     def update_odom(self):
-        self.feedback.current_distance_travelled = self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+        self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
+        self.feedback.current_distance_travelled = self.distance
     
         self.closest_object = self.tb3_lidar.min_distance
         self.closest_object_location = self.tb3_lidar.closest_object_position
