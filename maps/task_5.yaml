@@ -1,4 +1,4 @@
-image: arena.pgm
+image: /home/ethan/catkin_ws/src/com2009_team5/maps/task_5.pgm
 resolution: 0.050000
 origin: [-10.000000, -10.000000, 0.000000]
 negate: 0

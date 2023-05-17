@@ -5,6 +5,7 @@ import rospy
 from pathlib import Path
 
 path = Path.home().joinpath("catkin_ws/src/com2009_team5/maps/task_5")
+path.mkdir(parents=True, exist_ok=True)
 rospy.init_node("map_getter", anonymous=True)
 rate = rospy.Rate(0.01)
 
