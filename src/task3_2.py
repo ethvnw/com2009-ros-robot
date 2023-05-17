@@ -33,7 +33,7 @@ class Task3_2():
 
     def server_callback(self, feedback: SearchFeedback):
         self.distance = feedback.current_distance_travelled
-        print(f"Distance travelled: {self.distance}")
+        #print(f"Distance travelled: {self.distance}")
 
     def main_loop(self):
         while not self.ctrl_c:
@@ -42,7 +42,7 @@ class Task3_2():
             if not self.action_complete:
                 print("Sending goal")
                 self.goal.approach_distance = 0.4
-                self.goal.fwd_velocity = 0.2
+                self.goal.fwd_velocity = 0.5
                 self.client.send_goal(self.goal, feedback_cb=self.server_callback)
                 self.action_complete = self.client.wait_for_result()
             

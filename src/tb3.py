@@ -47,7 +47,7 @@ class Tb3Odometry(object):
         return float(value) / (10**precision)
 
 class Tb3LaserScan(object):
-    def laserscan_cb(self, scan_data):
+    def laserscan_cb(self, scan_data): 
         left_arc = scan_data.ranges[0:26]
         right_arc = scan_data.ranges[-25:]
         front_arc = np.array(left_arc[::-1] + right_arc[::-1])

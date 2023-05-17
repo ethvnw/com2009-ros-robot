@@ -1,0 +1,6 @@
+<launch>
+  <node pkg="com2009_team5" type="task3_2.py" name="my_task3" output="screen">
+  </node>
+  <node pkg="com2009_team5" type="obstacle_avoidance_server.py" name="my_avoidance" output="screen">
+  </node>
+</launch>
