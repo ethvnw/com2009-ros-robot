@@ -15,7 +15,7 @@
         output="screen"
     />
 
-    <!-- Calls SLAM for map creation -->
+    <!-- Calls SLAM for map creation
     <include file="$(find turtlebot3_slam)/launch/turtlebot3_slam.launch">
     </include>
 
@@ -24,5 +24,5 @@
         name="task5_map_saver"
         type="task5_map_saver.py"
         output="screen"
-    />
+    /> -->
 </launch>

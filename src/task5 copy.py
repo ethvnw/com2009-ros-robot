@@ -10,12 +10,17 @@ from pathlib import Path
 from tuos_ros_msgs.msg import SearchAction, SearchGoal, SearchFeedback
 
 
+# 0.2 and 3.5 is range lidar can see
+# between that its 0, make sure it doesnt defualt to 0. 
 class Task5():
     goal = SearchGoal()
 
+    filters = [(-10, 150, 100),(10, 255, 255),(20,50,100),(40,255,255),
+                (52,177,100),(75,255,255),(112,150,100),(128,255,255)]
+
     def __init__(self):
         rospy.init_node("Task5")
-        self.rate = rospy.Rate(10)
+        self.rate = rospy.Rate(1)
 
         cli = argparse.ArgumentParser(description="Command-line interface for Task 5 node")
         cli.add_argument(
@@ -35,7 +40,7 @@ class Task5():
         self.tb3_lidar = tb3.Tb3LaserScan()
         self.distance = 0
 
-        self.cam_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.cam_callback)
+        self.cam_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.cam_callback)
         self.cv = CvBridge()
         self.m00 = 0
         self.m00_min = 10000
@@ -100,47 +105,57 @@ class Task5():
            
         cv2.waitKey(1)
 
+    def avoid_sides(self):
+        threshold = 0.15
+        side = ""
+        dist = 0
+
+        if self.tb3_lidar.min_left < threshold:
+            self.vel_controller.set_move_cmd(angular=1.5)
+            side = "left"
+        elif self.tb3_lidar.min_right < threshold:
+            self.vel_controller.set_move_cmd(angular=-1.5)
+            side = "right"
+
+        while dist < threshold:
+            if side == "left":
+                dist = self.tb3_lidar.min_left
+            else:
+                dist = self.tb3_lidar.min_right
+
+            self.vel_controller.publish()
+            self.rate.sleep()
+            continue
+
+        self.vel_controller.stop()
+
 
     def main_loop(self):
         self.goal.fwd_velocity = 0.2
         self.goal.approach_distance = 0.5
 
         while not rospy.is_shutdown():
-            self.action_complete = False
+
             self.client.send_goal(self.goal, feedback_cb=self.feedback_callback)
-            
+            print("goal sent")
             while self.client.get_state() < 2:
-                if self.distance > 2 or (not self.image_taken and self.target_found):
+                self.avoid_sides()
+
+                if not self.image_taken and self.target_found:
                     self.client.cancel_goal()
-                    rospy.logwarn("Goal Cancelled...")
+                    rospy.loginfo("Target found!")
+                    self.ready_for_img = True
+                    rospy.sleep(3)  
                     break
                 self.rate.sleep()
 
-            self.action_complete = True
+            print("goal ended")
+      
+            self.avoid_sides()
 
-            if self.target_found and not self.image_taken:
-                rospy.loginfo("Target found!")
-                self.ready_for_img = True
-                rospy.sleep(3)
-   
-            if self.client.get_result() != None:
-           
-                obj_angle = self.client.get_result().closest_object_angle
-                if obj_angle > 0:
-                    self.vel_controller.set_move_cmd(angular=1.5)
-                else:
-                    self.vel_controller.set_move_cmd(angular=-1.5)
-                
 
-                print(f"Rotating with {self.vel_controller.vel_cmd.angular.z} angular velocity...")
-            
-                self.vel_controller.publish()
-                while (self.tb3_lidar.min_distance < self.goal.approach_distance):
-                    self.rate.sleep()
-                    continue
-
-            self.vel_controller.stop()
             self.rate.sleep()
+
 
 if __name__ == '__main__':
     try:
