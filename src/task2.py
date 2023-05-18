@@ -85,7 +85,7 @@ class Task2():
         current_step = 0.0   
 
     def main_loop(self):
-        self.goal.approach_distance = 0.6 # m
+        self.goal.approach_distance = 0.625 # m
         self.goal.fwd_velocity = 0.26 # m/s
         start_time = rospy.get_rostime()
         timeup = False
