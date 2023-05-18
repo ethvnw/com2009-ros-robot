@@ -6,6 +6,9 @@ import actionlib
 from tuos_ros_msgs.msg import SearchAction, SearchGoal, SearchFeedback
 import tb3
 
+# roslaunch com2009_simulations maze_nav.launch
+# roslaunch com2009 task3.launch
+
 class Task3():
 
     def __init__(self):
@@ -14,11 +17,12 @@ class Task3():
         self.ctrl_c = False
         self.rate = rospy.Rate(1)
 
-        self.client = actionlib.SimpleActionClient("/obstacle_avoidance_server", SearchAction)
+        self.client = actionlib.SimpleActionClient("/maze_server", SearchAction)
         self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
         self.goal = SearchGoal()
         self.action_complete = False
         self.scan = tb3.Tb3LaserScan()
+
 
 
         rospy.on_shutdown(self.shutdownhook)
@@ -31,6 +35,10 @@ class Task3():
     def feedback_callback(self, feedback):
         x = 0
 
+    def server_callback(self, feedback: SearchFeedback):
+        self.distance = feedback.current_distance_travelled
+        #print(f"Distance travelled: {self.distance}")
+
     def main_loop(self):
         # self.wall = self.scan.left_min
         while not self.ctrl_c:
@@ -39,9 +47,9 @@ class Task3():
             if not self.action_complete:
                 print("Sending goal")
                 #self.goal_sent = True
-                self.goal.approach_distance = 0.4
-                self.goal.fwd_velocity = 0.35
-                self.client.send_goal(self.goal, feedback_cb=self.feedback_callback)
+                self.goal.approach_distance = 0.45
+                self.goal.fwd_velocity = 0.25
+                self.client.send_goal(self.goal, feedback_cb=self.server_callback)
                 self.action_complete = self.client.wait_for_result()
 
             # while self.scan.left_min > self.wall+0.1:
