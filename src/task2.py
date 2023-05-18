@@ -50,7 +50,7 @@ class Task2():
     def feedback_callback(self, feedback_data: SearchFeedback):
         self.distance = feedback_data.current_distance_travelled
         if self.msg_counter > 5:
-            print(f"distance traveled = {self.distance:.3f} m.")
+            #print(f"distance traveled = {self.distance:.3f} m.")
             self.msg_counter = 0
         else:
             self.msg_counter += 1
@@ -60,9 +60,9 @@ class Task2():
         if obj != None:
             obj_angle = obj.closest_object_angle
             if obj_angle > 0:
-                self.vel_controller.set_move_cmd(angular=1.5)
+                self.vel_controller.set_move_cmd(angular=1.2)
             else:
-                self.vel_controller.set_move_cmd(angular=-1.5)
+                self.vel_controller.set_move_cmd(angular=-1.2)
             
             self.vel_controller.publish()
 
@@ -70,12 +70,8 @@ class Task2():
         random_rotate = random.randint(0,180)
         current_rotate = 0
 
-        self.vel_controller.set_move_cmd(0,0)
-        self.vel_controller.publish()
-
         self.turn_direction()
 
-        #print("turning")
         while (current_rotate < random_rotate):
             current_rotate += 1
 
@@ -89,10 +85,14 @@ class Task2():
         current_step = 0.0   
 
     def main_loop(self):
-        self.goal.approach_distance = 0.55 # m
+        self.goal.approach_distance = 0.57 # m
         self.goal.fwd_velocity = 0.26 # m/s
         start_time = rospy.get_rostime()
         timeup = False
+
+        step_size = levy.rvs(scale=0.1,size=1)[0]
+        step_inc = 10 ** (floor(log10(step_size)-1))
+        current_step = 0.0
         
         while (not rospy.is_shutdown()): 
             self.action_complete = False
@@ -109,27 +109,23 @@ class Task2():
 
             self.vel_controller.set_move_cmd(self.goal.fwd_velocity,0)
 
-            #print(f"Rotating with {self.vel_controller.vel_cmd.angular.z} angular velocity...")
-            
-            step_size = levy.rvs(scale=0.1,size=1)[0]
-            step_inc = 10 ** (floor(log10(step_size)-1))
-            current_step = 0.0
-
             while (self.scan.min_distance < self.goal.approach_distance 
-                and self.scan.min_left > 0.15 and self.scan.min_right > 0.15):
-                # if ((rospy.get_rostime().secs - start_time.secs) < 90):
-                self.random_turn()
-                # else:
-                #     self.client.cancel_goal()
-                #     print("90 secs elapsed")
-                #     timeup = True
-                #     self.action_complete = True
-                #     break
+                and self.scan.min_left > 0.2 and self.scan.min_right > 0.2):
+    
+                self.vel_controller.set_move_cmd(0,0)
+                self.vel_controller.publish()
 
-            print("outside")
-            current_step += step_inc
-            if (current_step>step_size):
                 self.random_turn()
+
+            #print("outside")
+            current_step += step_inc
+            #print("current", current_step, "vs size",step_size)
+            if (current_step > step_size):
+
+                self.vel_controller.set_move_cmd(0,0)
+                self.vel_controller.publish()
+                self.random_turn()
+
             self.rate.sleep()
         
             if timeup:

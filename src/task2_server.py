@@ -47,9 +47,9 @@ class SearchActionServer():
             print("velocity out of range")
             success = False
 
-        if not success:
-            self.actionserver.set_aborted(self.result)
-            return
+        # if not success:
+        #     self.actionserver.set_aborted(self.result)
+        #     return
 
         #print(f"Search goal recieved: fwd_vel = {vel} m/s, approach_distance = {dist} m.")
 
@@ -87,14 +87,14 @@ class SearchActionServer():
             #self.vel_controller.stop()           
             success = True
             # print("success")
-        else:
-            rospy.loginfo("run unsuccessful.")
-            self.result.total_distance_travelled = -1.0
-            self.result.closest_object_angle = -1.0
-            self.closest_object_distance = -1.0
-            self.actionserver.set_aborted(self.result)
-            self.vel_controller.stop()
-            return
+        # else:
+        #     rospy.loginfo("run unsuccessful.")
+        #     self.result.total_distance_travelled = -1.0
+        #     self.result.closest_object_angle = -1.0
+        #     self.closest_object_distance = -1.0
+        #     self.actionserver.set_aborted(self.result)
+        #     self.vel_controller.stop()
+        #     return
 
     def update_odom(self):
         self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))
