@@ -60,9 +60,9 @@ class Task2():
         if obj != None:
             obj_angle = obj.closest_object_angle
             if obj_angle > 0:
-                self.vel_controller.set_move_cmd(angular=1.2)
+                self.vel_controller.set_move_cmd(angular=1.5)
             else:
-                self.vel_controller.set_move_cmd(angular=-1.2)
+                self.vel_controller.set_move_cmd(angular=-1.5)
             
             self.vel_controller.publish()
 
@@ -110,7 +110,7 @@ class Task2():
             self.vel_controller.set_move_cmd(self.goal.fwd_velocity,0)
 
             while (self.scan.min_distance < self.goal.approach_distance 
-                and self.scan.min_left > 0.21 and self.scan.min_right > 0.21):
+                and self.scan.min_left > 0.175 and self.scan.min_right > 0.175):
     
                 self.vel_controller.set_move_cmd(0,0)
                 self.vel_controller.publish()
