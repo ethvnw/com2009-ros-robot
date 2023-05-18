@@ -4,6 +4,8 @@
 #run commands:
 
 #roslaunch com2009_simulations obstacle_avoidance.launch
+#roslaunch com2009_team5 task2.launch
+
 #rosrun com2009_team5 task2_server.py
 #rosrun com2009_team5 task2.py
 
@@ -43,13 +45,13 @@ class SearchActionServer():
         dist = goal.approach_distance #m
         success = True
 
-        if vel > 0.26 or vel <= 0:
+        if vel > 0.26 or vel < 0:
             print("velocity out of range")
             success = False
 
-        # if not success:
-        #     self.actionserver.set_aborted(self.result)
-        #     return
+        if not success:
+            self.actionserver.set_aborted(self.result)
+            return
 
         #print(f"Search goal recieved: fwd_vel = {vel} m/s, approach_distance = {dist} m.")
 
@@ -67,7 +69,7 @@ class SearchActionServer():
             # print(self.closest_object)
 
             if self.actionserver.is_preempt_requested():
-                rospy.loginfo("Action has been stoped before completion.")
+                #rospy.loginfo("Action has been stoped before completion.")
                 self.vel_controller.stop()
                 success = False
                 self.actionserver.set_preempted(self.result)
@@ -87,14 +89,14 @@ class SearchActionServer():
             #self.vel_controller.stop()           
             success = True
             # print("success")
-        # else:
-        #     rospy.loginfo("run unsuccessful.")
-        #     self.result.total_distance_travelled = -1.0
-        #     self.result.closest_object_angle = -1.0
-        #     self.closest_object_distance = -1.0
-        #     self.actionserver.set_aborted(self.result)
-        #     self.vel_controller.stop()
-        #     return
+        else:
+            #rospy.loginfo("run unsuccessful.")
+            self.result.total_distance_travelled = -1.0
+            self.result.closest_object_angle = -1.0
+            self.closest_object_distance = -1.0
+            #self.actionserver.set_aborted(self.result)
+            self.vel_controller.stop()
+            return
 
     def update_odom(self):
         self.distance = sqrt(pow(self.posx0 - self.tb3_odom.posx, 2) + pow(self.posy0 - self.tb3_odom.posy, 2))

@@ -67,7 +67,7 @@ class Task2():
             self.vel_controller.publish()
 
     def random_turn(self):
-        random_rotate = random.randint(0,180)
+        random_rotate = random.randint(90,180)
         current_rotate = 0
 
         self.turn_direction()
@@ -85,7 +85,7 @@ class Task2():
         current_step = 0.0   
 
     def main_loop(self):
-        self.goal.approach_distance = 0.57 # m
+        self.goal.approach_distance = 0.6 # m
         self.goal.fwd_velocity = 0.26 # m/s
         start_time = rospy.get_rostime()
         timeup = False
@@ -117,14 +117,14 @@ class Task2():
 
                 self.random_turn()
 
-            #print("outside")
-            current_step += step_inc
-            #print("current", current_step, "vs size",step_size)
-            if (current_step > step_size):
+            # #print("outside")
+            # current_step += step_inc
+            # #print("current", current_step, "vs size",step_size)
+            # if (current_step > step_size):
 
-                self.vel_controller.set_move_cmd(0,0)
-                self.vel_controller.publish()
-                self.random_turn()
+            #     self.vel_controller.set_move_cmd(0,0)
+            #     self.vel_controller.publish()
+            #     self.random_turn()
 
             self.rate.sleep()
         
