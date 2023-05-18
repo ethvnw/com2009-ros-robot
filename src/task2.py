@@ -110,7 +110,7 @@ class Task2():
             self.vel_controller.set_move_cmd(self.goal.fwd_velocity,0)
 
             while (self.scan.min_distance < self.goal.approach_distance 
-                and self.scan.min_left > 0.2 and self.scan.min_right > 0.2):
+                and self.scan.min_left > 0.21 and self.scan.min_right > 0.21):
     
                 self.vel_controller.set_move_cmd(0,0)
                 self.vel_controller.publish()
