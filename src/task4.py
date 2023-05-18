@@ -166,6 +166,7 @@ class Task4():
 
                 #if the colour takes up the whole screen ie the object is very close
                 # TODO: Adjust conditional to trigger when robot has reached goal state (close to targets)
+
                 if (510 < self.cy < 610 and self.min_dist < 0.4):
                     #stop the robot
                     self.vel.linear.x = 0.0
