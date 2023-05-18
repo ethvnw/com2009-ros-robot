@@ -117,6 +117,7 @@ class Task5():
                 self.rate.sleep()
 
             self.action_complete = True
+            print("goal complete")
 
             if self.target_found and not self.image_taken:
                 rospy.loginfo("Target found!")
@@ -135,9 +136,8 @@ class Task5():
                 print(f"Rotating with {self.vel_controller.vel_cmd.angular.z} angular velocity...")
             
                 self.vel_controller.publish()
-                while (self.tb3_lidar.min_distance < self.goal.approach_distance):
-                    self.rate.sleep()
-                    continue
+               
+                rospy.sleep(0.3)
 
             self.vel_controller.stop()
             self.rate.sleep()
