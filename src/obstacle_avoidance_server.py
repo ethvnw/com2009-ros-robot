@@ -46,10 +46,10 @@ class ObstacleAvoidanceServer():
                 
                 if self.tb3_lidar.min_left > self.tb3_lidar.min_right:
                     #print("moving left oa")
-                    self.vel_controller.set_move_cmd(0, 0.5)
+                    self.vel_controller.set_move_cmd(0, 0.7)
                 else:
                     #print("moving right oa")
-                    self.vel_controller.set_move_cmd(0, -0.5)
+                    self.vel_controller.set_move_cmd(0, -0.7)
                 self.vel_controller.publish()
 
 

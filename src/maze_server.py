@@ -5,13 +5,13 @@ from tuos_ros_msgs.msg import SearchAction, SearchFeedback, SearchResult, Search
 from tb3 import Tb3Move, Tb3Odometry, Tb3LaserScan
 from math import sqrt, pow
 
-class ObstacleAvoidanceServer():
+class MazeServer():
     feedback = SearchFeedback() 
     result = SearchResult()
 
     def __init__(self):
-        self.node_name = "ObstacleAvoidanceServer"
-        self.actionserver = actionlib.SimpleActionServer("/obstacle_avoidance_server", SearchAction, self.action_server_launcher, auto_start=False)
+        self.node_name = "MazeServer"
+        self.actionserver = actionlib.SimpleActionServer("/maze_server", SearchAction, self.action_server_launcher, auto_start=False)
         self.vel_controller = Tb3Move()
         self.tb3_odom = Tb3Odometry()
         self.tb3_lidar = Tb3LaserScan()
@@ -44,9 +44,9 @@ class ObstacleAvoidanceServer():
             while self.closest_object < goal.approach_distance:
                 self.update_odom()
                 if self.tb3_lidar.min_left > self.tb3_lidar.min_right:
-                    self.vel_controller.set_move_cmd(0, 0.5)
+                    self.vel_controller.set_move_cmd(0, 0.7)
                 else:
-                    self.vel_controller.set_move_cmd(0, -0.5)
+                    self.vel_controller.set_move_cmd(0, -0.7)
                 self.vel_controller.publish()
 
 
@@ -80,6 +80,6 @@ class ObstacleAvoidanceServer():
 
 
 if __name__ == '__main__':
-    rospy.init_node("obstacle_avoidance_server")
-    ObstacleAvoidanceServer()
+    rospy.init_node("maze_server")
+    MazeServer()
     rospy.spin()
