@@ -87,7 +87,7 @@ class Task4():
         
         height, width, _ = cv_img.shape
         crop_width = width - 800
-        crop_height = 400
+        crop_height = 100
         crop_x = int((width/2) - (crop_width/2))
         crop_y = int((height/2) - (crop_height/2))
 
@@ -102,7 +102,7 @@ class Task4():
             self.cy = m['m10'] / (m['m00'] + 1e-5)
             self.cz = m['m01'] / (m['m00'] + 1e-5)
 
-        # cv2.imshow('cropped image', crop_img)
+        cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
 
     def server_callback(self, feedback: SearchFeedback):
@@ -134,7 +134,6 @@ class Task4():
     def check_for_target(self):
         mask = cv2.inRange(self.hsv_img, self.colours[self.target_colour][0], self.colours[self.target_colour][1])
         if mask.any():
-            print("TARGET DETECTED: Beaconing initiated.")
             return True
         
         return False
@@ -163,44 +162,50 @@ class Task4():
 
             #if turtlebot is seeing colour and is 0.3m from initial position
             if self.check_for_target() and abs(self.odom_tb3.posx - self.init_x) > 0.3 and abs(self.odom_tb3.posy - self.init_y) > 0.3:
-                print("hello, we are in the for loop")
+                print("TARGET DETECTED: Beaconing initiated.")
 
                 #if the colour takes up the whole screen ie the object is very close
-                if  (1 >= self.cy <= 1200):
+                # TODO: Adjust conditional to trigger when robot has reached goal state (close to targets)
+
+                if (510 < self.cy < 610 and self.min_dist < 0.4):
                     #stop the robot
-                    while(rospy.get_rostime().secs - StartTime.secs) < 30.78:
-                        self.robot_controller.set_move_cmd(0.0, 0.0)
+                    self.vel.linear.x = 0.0
+                    self.vel.angular.z = 0.0                        
+                    self.pub.publish(self.vel)
                     print("BEACONING COMPLETE: The robot has now stopped.")
                     self.pub.publish(Twist())
+                    break
 
                 # if the target colour is in the middle
-                if 500 < self.cy < 600:
+                if 510 < self.cy < 610:
                     print("moving fwd")
                     while(rospy.get_rostime().secs - StartTime.secs) < 2:
                         # move fwd
-                        self.vel.linear.x = 0.1
+                        self.vel.linear.x = 0.18
+                        self.vel.angular.z = 0.0
                         
                         self.pub.publish(self.vel)
                         #self.robot_controller.set_move_cmd(0.5, 0.0)
+                        
                 # if the target colour is on the right hand side
-                elif self.cy >= 600:
+                elif self.cy >= 610:
                     print("moving right")
-                    while(rospy.get_rostime().secs - StartTime.secs) < 0.3:
+                    while(rospy.get_rostime().secs - StartTime.secs) < 0.1:
                         # move right
-                        self.vel.angular.z = -0.5
-                        self.vel.linear.x = 0.2
+                        self.vel.angular.z = -0.1
+                        self.vel.linear.x = 0.0
                         self.pub.publish(self.vel)
 
                         #self.robot_controller.set_move_cmd(0.0, -0.5)
                     #self.pub.publish(Twist())
 
                 #if target colour is on the left hand side
-                elif self.cy <= 500:
+                elif self.cy <= 510:
                     print("moving left")
-                    while(rospy.get_rostime().secs - StartTime.secs) < 0.3:
+                    while(rospy.get_rostime().secs - StartTime.secs) < 0.1:
                         #move left
-                        self.vel.angular.z = 0.5
-                        self.vel.linear.x = 0.2
+                        self.vel.angular.z = 0.1
+                        self.vel.linear.x = 0.0
                         self.pub.publish(self.vel)
                         #self.robot_controller.set_move_cmd(0.0, -0.5)
                     #self.pub.publish(Twist())

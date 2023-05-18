@@ -1,7 +1,7 @@
 #! /usr/bin/env python3
 import rospy
 import actionlib
-import tb3
+import tb3_task5
 import argparse
 import cv2
 from sensor_msgs.msg import Image
@@ -31,11 +31,11 @@ class Task5():
         self.client.wait_for_server()
         self.action_complete = False
 
-        self.vel_controller = tb3.Tb3Move()
-        self.tb3_lidar = tb3.Tb3LaserScan()
+        self.vel_controller = tb3_task5.Tb3Move()
+        self.tb3_lidar = tb3_task5.Tb3LaserScan()
         self.distance = 0
 
-        self.cam_sub = rospy.Subscriber("/camera/rgb/image_raw", Image, self.cam_callback)
+        self.cam_sub = rospy.Subscriber("/camera/color/image_raw", Image, self.cam_callback)
         self.cv = CvBridge()
         self.m00 = 0
         self.m00_min = 10000
