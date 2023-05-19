@@ -1,6 +1,22 @@
 <launch>
+<<<<<<< HEAD
+    <node
+        pkg="com2009_team5"
+        name="task2_server"
+        type="task2_server.py"
+        output="screen"
+    />
+
+    <node
+        pkg="com2009_team5"
+        name="task2"
+        type="task2.py"
+        output="screen"
+    />
+=======
   <node pkg="com2009_team5" type="task2.py" name="my_task2" output="screen">
   </node>
   <node pkg="com2009_team5" type="task2_server.py" name="my_task2_server" output="screen">
   </node>
+>>>>>>> refs/remotes/origin/main
 </launch>
