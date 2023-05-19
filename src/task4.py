@@ -2,6 +2,7 @@
 import rospy
 import actionlib
 import math
+import random
 import cv2
 import numpy as np
 from tb3 import Tb3Odometry, Tb3LaserScan, Tb3Move
@@ -107,7 +108,7 @@ class Task4():
 
     def server_callback(self, feedback: SearchFeedback):
         self.distance = feedback.current_distance_travelled
-        print(f"Distance travelled: {self.distance}")
+        #print(f"Distance travelled: {self.distance}")
 
 
     def find_target_colour(self):
@@ -143,14 +144,33 @@ class Task4():
             return True
         
         return False
-        
 
-    
+    def turn_around(self):
+        while (self.tb3_lidar.min_distance < self.goal.approach_distance 
+            and self.tb3_lidar.min_left > 0.175 and self.tb3_lidar.min_right < 0.175):
+
+            self.vel.linear.x = 0
+            obj = self.client.get_result()
+            speed = 1
+            if obj != None:
+                obj_angle = obj.closest_object_angle
+                if obj_angle > 0:
+                    speed = -1
+
+            self.vel.angular.z = speed
+            time = math.radians(random.randint(90,180)) / speed
+            self.pub.publish(self.vel)
+            self.pub.publish(Twist())
+            rospy.sleep(time)
+
+            self.vel.linear.x = 0.26
+            self.pub.publish(self.vel)
 
     def main_loop(self):
         #prints coords of the turtlebot
         #print(f"COORDS : ({self.odom_tb3.posx}, {self.odom_tb3.posy})")
-
+        beaconing = False
+        found = False
         while not self.ctrl_c:
             self.rate.sleep()
             rospy.sleep(0.2)
@@ -169,18 +189,20 @@ class Task4():
             #if turtlebot is seeing colour and is 0.3m from initial position
             if self.check_for_target() and abs(self.odom_tb3.posx - self.init_x) > 0.3 and abs(self.odom_tb3.posy - self.init_y) > 0.3:
                 print("TARGET DETECTED: Beaconing initiated.")
+                beaconing = True
                 self.goal.approach_distance = 0.4
 
                 #if the colour takes up the whole screen ie the object is very close
                 # TODO: Adjust conditional to trigger when robot has reached goal state (close to targets)
 
-                if (510 < self.cy < 610 and self.min_dist < 0.4):
+                if (510 < self.cy < 610 and self.min_dist < self.goal.approach_distance):
                     #stop the robot
                     self.vel.linear.x = 0.0
                     self.vel.angular.z = 0.0                        
                     self.pub.publish(self.vel)
                     print("BEACONING COMPLETE: The robot has now stopped.")
                     self.pub.publish(Twist())
+                    found = True
                     break
 
                 # if the target colour is in the middle
@@ -216,10 +238,15 @@ class Task4():
                         self.pub.publish(self.vel)
                         #self.robot_controller.set_move_cmd(0.0, -0.5)
                     #self.pub.publish(Twist())
-                    
+            if found == True:
+                self.vel.linear.x = 0.0
+                self.vel.angular.z = 0.0
+                self.pub.publish(self.vel)
+                break
+            if beaconing == False and found == False:
+                self.turn_around()
 
-
-
+#roslaunch com2009_simulations beaconing.launch start_zone:=c
 
 if __name__ == "__main__":
     node = Task4()
