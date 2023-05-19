@@ -102,7 +102,7 @@ class Task4():
             self.cy = m['m10'] / (m['m00'] + 1e-5)
             self.cz = m['m01'] / (m['m00'] + 1e-5)
 
-        cv2.imshow('cropped image', crop_img)
+        # cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
 
     def server_callback(self, feedback: SearchFeedback):
@@ -111,9 +111,15 @@ class Task4():
 
 
     def find_target_colour(self):
+        self.vel.linear.x = 0.26
+        time = 2
+        self.pub.publish(self.vel)
+        rospy.sleep(time)
+
+        self.vel.linear.x = 0
         speed = 1
         self.vel.angular.z = speed
-        time = math.radians(90) / speed
+        time = math.radians(180) / speed
         self.pub.publish(self.vel)
         rospy.sleep(time)
         self.pub.publish(Twist())
@@ -152,7 +158,7 @@ class Task4():
                 self.find_target_colour()
 
             if not self.action_complete:
-                self.goal.approach_distance = 0.4
+                self.goal.approach_distance = 0.6
                 self.goal.fwd_velocity = 0.2
                 self.client.send_goal(self.goal, feedback_cb=self.server_callback)
                 #self.action_complete = self.client.wait_for_result()
@@ -163,6 +169,7 @@ class Task4():
             #if turtlebot is seeing colour and is 0.3m from initial position
             if self.check_for_target() and abs(self.odom_tb3.posx - self.init_x) > 0.3 and abs(self.odom_tb3.posy - self.init_y) > 0.3:
                 print("TARGET DETECTED: Beaconing initiated.")
+                self.goal.approach_distance = 0.4
 
                 #if the colour takes up the whole screen ie the object is very close
                 # TODO: Adjust conditional to trigger when robot has reached goal state (close to targets)
@@ -178,10 +185,10 @@ class Task4():
 
                 # if the target colour is in the middle
                 if 510 < self.cy < 610:
-                    print("moving fwd")
+                    #print("moving fwd")
                     while(rospy.get_rostime().secs - StartTime.secs) < 2:
                         # move fwd
-                        self.vel.linear.x = 0.18
+                        self.vel.linear.x = 0.26
                         self.vel.angular.z = 0.0
                         
                         self.pub.publish(self.vel)
@@ -189,7 +196,7 @@ class Task4():
                         
                 # if the target colour is on the right hand side
                 elif self.cy >= 610:
-                    print("moving right")
+                    #print("moving right")
                     while(rospy.get_rostime().secs - StartTime.secs) < 0.1:
                         # move right
                         self.vel.angular.z = -0.1
@@ -201,7 +208,7 @@ class Task4():
 
                 #if target colour is on the left hand side
                 elif self.cy <= 510:
-                    print("moving left")
+                    #print("moving left")
                     while(rospy.get_rostime().secs - StartTime.secs) < 0.1:
                         #move left
                         self.vel.angular.z = 0.1

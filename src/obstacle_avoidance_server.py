@@ -22,7 +22,7 @@ class ObstacleAvoidanceServer():
     def action_server_launcher(self, goal: SearchGoal):
         rate = rospy.Rate(10)
         success = False
-        print("Goal received: approach dist: %.2f" % goal.approach_distance + ", fwd vel: %.2f" % goal.fwd_velocity)
+        #print("Goal received: approach dist: %.2f" % goal.approach_distance + ", fwd vel: %.2f" % goal.fwd_velocity)
         
         self.posx0 = self.tb3_odom.posx
         self.posy0 = self.tb3_odom.posy
@@ -61,7 +61,7 @@ class ObstacleAvoidanceServer():
         self.actionserver.set_preempted()
         self.vel_controller.stop()           
         success = False
-        print("The action has been preempted.")
+        #print("The action has been preempted.")
 
 
     def update_odom(self):
