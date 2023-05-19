@@ -6,13 +6,13 @@ import actionlib
 from tuos_ros_msgs.msg import SearchAction, SearchGoal, SearchFeedback
 import tb3
 
-class Task3_2():
+class Task3():
 
     def __init__(self):
-        node_name = "Task3_2"
+        node_name = "Task3"
         rospy.init_node(node_name, anonymous=True)
         self.ctrl_c = False
-        self.rate = rospy.Rate(1)
+        self.rate = rospy.Rate(10)
 
         self.client = actionlib.SimpleActionClient("/obstacle_avoidance_server", SearchAction)
         self.pub = rospy.Publisher('/cmd_vel', Twist, queue_size=10)
@@ -49,7 +49,7 @@ class Task3_2():
             self.rate.sleep()
 
 if __name__ == "__main__":
-    node = Task3_2()
+    node = Task3()
     try:
         node.main_loop()
     except rospy.ROSInterruptException:
