@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from re import T
 import rospy
 import actionlib
 import math
@@ -102,7 +103,7 @@ class Task4():
             self.cy = m['m10'] / (m['m00'] + 1e-5)
             self.cz = m['m01'] / (m['m00'] + 1e-5)
 
-        cv2.imshow('cropped image', crop_img)
+        # cv2.imshow('cropped image', crop_img)
         cv2.waitKey(1)
 
     def server_callback(self, feedback: SearchFeedback):
@@ -111,9 +112,14 @@ class Task4():
 
 
     def find_target_colour(self):
+        self.vel.linear.x = 0.26
+        time = 2
+        self.pub.publish(self.vel)
+        rospy.sleep(time)        
+        self.vel.linear.x = 0
         speed = 1
         self.vel.angular.z = speed
-        time = math.radians(90) / speed
+        time = math.radians(180) / speed
         self.pub.publish(self.vel)
         rospy.sleep(time)
         self.pub.publish(Twist())
